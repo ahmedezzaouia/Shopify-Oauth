@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import { Shopify } from "@shopify/shopify-api";
+import fetch from 'node-fetch'
+
 
 
 const host = "127.0.0.1";
@@ -20,15 +22,18 @@ Shopify.Context.initialize({
 });
 const app = express();
 
-app.get("/", (req, res) => {
+app.get("/",async(req, res) => {
     
-console.log(req.query)
-
-    console.log('path / start');
+    console.log('******** path / start');
+    console.log(shopes[req.query.shop])
     
     if(typeof shopes[req.query.shop] !== "undefined")
     {
-        res.send("Hello World");
+        console.log('shop == ',req.query.shop)
+        console.log('token == ',shopes[req.query.shop].accessToken)
+        const products = await getProducts(`https://${req.query.shop}/admin/api/2022-04/graphql.json`, shopes[req.query.shop].accessToken);
+        console.log(products)
+        res.send("hello akdjkad");
     }
     else
     {
@@ -36,8 +41,9 @@ console.log(req.query)
     }
 });
 
+
 app.get('/auth',async (req,res)=>{
-    console.log('path /auth start');
+    console.log('******** path /auth start');
 
 const authRoute = await Shopify.Auth.beginAuth(
     req,
@@ -51,18 +57,50 @@ res.redirect(authRoute);
 })
 
 app.get('/auth/callback',async (req,res)=>{
-console.log('path /auth/callback start');
-console.log(`the shop is : ${req.query}`)
+console.log('******** path /auth/callback start');
 
-const query =  req.query;
-const shopSession =  await Shopify.Auth.validateAuthCallback({
+const shopSession =  await Shopify.Auth.validateAuthCallback(
     req,
     res,
-    query
-}) 
+    req.query
+) 
 console.log('shopify validate',shopSession);
 shopes[shopSession.shop] = shopSession
-res.redirect(`https://${shopSession.shop}/admin/apps/node-oauth-2`);
+res.redirect(`http://${shopSession.shop}/admin/apps/node-oauth-2`);
 })
 
+
+
 app.listen(port, () => console.log(`server is running at https:\\${host}:${port}`));
+
+
+async function  getProducts(url,accessToken)  {
+    console.log('get profucts token :',accessToken)
+    const products = await fetch(url,
+    {
+        headers:{
+            "Content-type": "application/json",
+            "X-Shopify-Access-Token": `${accessToken}`,
+
+        },
+        method: "POST",
+          body: JSON.stringify({
+            query: `
+            {
+                products(first: 5) {
+                  edges {
+                    node {
+                      id
+                      handle
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                  }
+                }
+              }
+                `,
+          }),
+    })
+return products
+}
