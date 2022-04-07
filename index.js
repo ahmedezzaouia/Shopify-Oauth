@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import { Shopify } from "@shopify/shopify-api";
 import fetch from 'node-fetch'
+import axios from "axios";
 
 
 
@@ -18,7 +19,7 @@ Shopify.Context.initialize({
     API_SECRET_KEY: SHOPIFY_API_SECRET,
     SCOPES: SHOPIFY_API_SCOPES,
     HOST_NAME: HOST,
-    IS_EMBEDDED_APP: true,
+    IS_EMBEDDED_APP: false,
 });
 const app = express();
 
@@ -29,11 +30,16 @@ app.get("/",async(req, res) => {
     
     if(typeof shopes[req.query.shop] !== "undefined")
     {
-        console.log('shop == ',req.query.shop)
-        console.log('token == ',shopes[req.query.shop].accessToken)
-        const products = await getProducts(`https://${req.query.shop}/admin/api/2022-04/graphql.json`, shopes[req.query.shop].accessToken);
-        console.log(products)
-        res.send("hello akdjkad");
+        const products = await axios.get(`https://${req.query.shop}/admin/api/2022-04/products.json`,{
+          headers:{
+            "X-Shopify-Access-Token": shopes[req.query.shop].accessToken
+          }
+        })
+    
+         
+        console.log(products.data.products)
+        res.send(products.data.products);
+        
     }
     else
     {
@@ -75,32 +81,11 @@ app.listen(port, () => console.log(`server is running at https:\\${host}:${port}
 
 
 async function  getProducts(url,accessToken)  {
-    console.log('get profucts token :',accessToken)
-    const products = await fetch(url,
-    {
-        headers:{
-            "Content-type": "application/json",
-            "X-Shopify-Access-Token": `${accessToken}`,
-
-        },
-        method: "POST",
-          body: JSON.stringify({
-            query: `
-            {
-                products(first: 5) {
-                  edges {
-                    node {
-                      id
-                      handle
-                    }
-                  }
-                  pageInfo {
-                    hasNextPage
-                  }
-                }
-              }
-                `,
-          }),
+    const products = await axios.get(url,{
+      headers:{
+        "X-Shopify-Access-Token": accessToken
+      }
     })
+
 return products
 }
