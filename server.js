@@ -3,11 +3,10 @@ import dotenv from "dotenv";
 import { Shopify } from "@shopify/shopify-api";
 import fetch from 'node-fetch'
 import axios from "axios";
-
-
+import bodyParser from 'body-parser'
 
 const host = "127.0.0.1";
-const port = 3000;
+const port = 5000;
 dotenv.config();
 
 const { SHOPIFY_API_KEY, SHOPIFY_API_SECRET, SHOPIFY_API_SCOPES, HOST } = process.env;
@@ -19,31 +18,33 @@ Shopify.Context.initialize({
     API_SECRET_KEY: SHOPIFY_API_SECRET,
     SCOPES: SHOPIFY_API_SCOPES,
     HOST_NAME: HOST,
-    IS_EMBEDDED_APP: false,
+    IS_EMBEDDED_APP:false
+   
 });
 const app = express();
+app.use(bodyParser.urlencoded({ extended: false }))
 
 app.get("/",async(req, res) => {
     
     console.log('******** path / start');
-    console.log(shopes[req.query.shop])
+    console.log('from front: ',req.query.shop)
     
     if(typeof shopes[req.query.shop] !== "undefined")
     {
-        const products = await axios.get(`https://${req.query.shop}/admin/api/2022-04/products.json`,{
-          headers:{
-            "X-Shopify-Access-Token": shopes[req.query.shop].accessToken
-          }
-        })
+        // const products = await axios.get(`https://${req.query.shop}/admin/api/2022-04/products.json`,{
+        //   headers:{
+        //     "X-Shopify-Access-Token": shopes[req.query.shop].accessToken
+        //   }
+        // })
     
          
-        console.log(products.data.products)
-        res.send(products.data.products);
+        // console.log(products.data.products)
+        res.redirect(`https://myfront.netlify.app?${shopes[req.query.shop].accessToken}`)
         
     }
     else
     {
-        res.redirect(`/auth?shop=${req.query.shop}`)
+        res.redirect(`/auth?shop=${req.query.shop}`);
     }
 });
 
@@ -72,20 +73,10 @@ const shopSession =  await Shopify.Auth.validateAuthCallback(
 ) 
 console.log('shopify validate',shopSession);
 shopes[shopSession.shop] = shopSession
-res.redirect(`http://${shopSession.shop}/admin/apps/node-oauth-2`);
+res.redirect(`https://${shopes[shopSession.shop].shop}/admin/apps/node-oauth-2`);
 })
 
 
 
 app.listen(port, () => console.log(`server is running at https:\\${host}:${port}`));
 
-
-async function  getProducts(url,accessToken)  {
-    const products = await axios.get(url,{
-      headers:{
-        "X-Shopify-Access-Token": accessToken
-      }
-    })
-
-return products
-}
