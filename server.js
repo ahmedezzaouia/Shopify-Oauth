@@ -1,9 +1,11 @@
 import express from "express";
 import dotenv from "dotenv";
 import { Shopify } from "@shopify/shopify-api";
-import fetch from 'node-fetch'
+// import fetch from 'node-fetch'
 import axios from "axios";
 import bodyParser from 'body-parser'
+import { GraphQLClient, gql } from 'graphql-request'
+
 
 const host = "127.0.0.1";
 const port = 5000;
@@ -38,7 +40,32 @@ app.get("/",async(req, res) => {
         // })
     
          
-        // console.log(products.data.products)
+        const queryString = gql`{
+            products (first: 3) {
+              edges {
+                node {
+                  id
+                  title
+                }
+              }
+            }
+          }`;
+        
+           
+              const endpoint = 'https://developer-2022.myshopify.com/admin/api/2022-04/graphql.json'
+
+              const graphQLClient = new GraphQLClient(endpoint, {
+                headers: {
+                  "X-Shopify-Access-Token": shopes[req.query.shop].accessToken
+                },
+              })
+            
+              const data = await graphQLClient.request(queryString)
+              console.log(JSON.stringify(data, undefined, 2))
+
+
+ 
+
         res.redirect(`https://myfront.netlify.app?${shopes[req.query.shop].accessToken}`)
         
     }
